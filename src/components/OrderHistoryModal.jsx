@@ -343,13 +343,27 @@ export function OrderHistoryModal({ isOpen, onClose, telegramId, haptic, onExplo
                     {order.items?.map((item) => (
                       <div
                         key={item.id}
-                        className="flex justify-between items-center text-xs text-slate-300"
+                        className="flex justify-between items-center text-xs text-slate-300 py-0.5"
                       >
-                        <div className="truncate max-w-[200px]">
-                          <span className="text-white font-medium">{item.product_title}</span>
-                          <span className="text-slate-500 ml-1.5 font-bold">x{item.quantity}</span>
+                        <div className="flex items-center gap-2 truncate max-w-[220px]">
+                          {item.selected_image && (
+                            <img
+                              src={item.selected_image}
+                              alt=""
+                              className="w-6 h-6 rounded-md object-cover bg-slate-900 border border-slate-700 shrink-0"
+                            />
+                          )}
+                          <div className="truncate">
+                            <span className="text-white font-medium">{item.product_title}</span>
+                            {item.variant_name && (
+                              <span className="ml-1.5 px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-bold border border-indigo-500/30">
+                                {item.variant_name}
+                              </span>
+                            )}
+                            <span className="text-slate-500 ml-1.5 font-bold">x{item.quantity}</span>
+                          </div>
                         </div>
-                        <span className="font-bold text-slate-200">
+                        <span className="font-bold text-slate-200 shrink-0">
                           ${item.subtotal.toFixed(2)}
                         </span>
                       </div>

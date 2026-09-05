@@ -55,6 +55,10 @@ export const translations = {
     quantity_label: 'Quantity',
     subtotal_label: 'Subtotal',
     buy_now: 'Buy Now',
+    select_type: 'Select Type / Option',
+    type_option: 'Type',
+    default_type: 'Main Style',
+    selected_label: 'Selected',
 
     // Bottom Nav
     nav_home: 'Home',
@@ -262,6 +266,10 @@ export const translations = {
     quantity_label: 'ចំនួនទំនិញ',
     subtotal_label: 'តម្លៃសរុប',
     buy_now: 'ទិញឥឡូវនេះ',
+    select_type: 'ជ្រើសរើសប្រភេទ / ជម្រើស',
+    type_option: 'ប្រភេទ',
+    default_type: 'ទម្រង់ដើម',
+    selected_label: 'បានជ្រើសរើស',
 
     // Bottom Nav
     nav_home: 'ទំព័រដើម',

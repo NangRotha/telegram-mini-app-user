@@ -12,6 +12,7 @@ import {
   Film,
   Star,
   CheckCircle2,
+  Check,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -65,6 +66,50 @@ export function ProductModal({
     return list;
   }, [product]);
 
+  // List of selectable image types / variants
+  const imageTypes = useMemo(() => {
+    if (!product) return [];
+    const types = [];
+    if (product.image_url) {
+      types.push({
+        id: 'main',
+        label: `${t('type_option')} #1`,
+        title: t('default_type'),
+        url: product.image_url,
+      });
+    }
+    if (Array.isArray(product.sub_images)) {
+      product.sub_images.filter(Boolean).forEach((img) => {
+        types.push({
+          id: `sub_${types.length}`,
+          label: `${t('type_option')} #${types.length + 1}`,
+          title: `${t('type_option')} #${types.length + 1}`,
+          url: img,
+        });
+      });
+    }
+    return types;
+  }, [product, t]);
+
+  const [selectedVariantId, setSelectedVariantId] = useState('main');
+
+  useEffect(() => {
+    setSelectedVariantId('main');
+  }, [product?.id]);
+
+  const selectedVariant = useMemo(() => {
+    return imageTypes.find((item) => item.id === selectedVariantId) || imageTypes[0] || null;
+  }, [imageTypes, selectedVariantId]);
+
+  const handleSelectVariant = (variant) => {
+    haptic?.selection?.();
+    setSelectedVariantId(variant.id);
+    const mediaIdx = mediaList.findIndex((m) => m.type === 'image' && m.url === variant.url);
+    if (mediaIdx !== -1) {
+      setActiveMediaIndex(mediaIdx);
+    }
+  };
+
   useEffect(() => {
     setActiveMediaIndex(0);
     setQty(initialQuantity || 1);
@@ -106,21 +151,52 @@ export function ProductModal({
   const handleAdd = () => {
     if (!isOutOfStock) {
       haptic?.notification?.('success');
-      onAddToCart(product, qty);
+      const chosen = selectedVariant || imageTypes[0];
+      onAddToCart(product, qty, {
+        variant_id: chosen?.id || 'main',
+        variant_name: imageTypes.length > 1 ? chosen?.label || `${t('type_option')} #1` : '',
+        selected_image: chosen?.url || product.image_url,
+      });
       onClose();
+    }
+  };
+
+  const handleSelectMedia = (idx) => {
+    haptic?.selection?.();
+    setActiveMediaIndex(idx);
+    const media = mediaList[idx];
+    if (media?.type === 'image') {
+      const match = imageTypes.find((t) => t.url === media.url);
+      if (match) setSelectedVariantId(match.id);
     }
   };
 
   const prevMedia = (e) => {
     e.stopPropagation();
     haptic?.selection?.();
-    setActiveMediaIndex((prev) => (prev > 0 ? prev - 1 : mediaList.length - 1));
+    setActiveMediaIndex((prev) => {
+      const newIdx = prev > 0 ? prev - 1 : mediaList.length - 1;
+      const media = mediaList[newIdx];
+      if (media?.type === 'image') {
+        const match = imageTypes.find((t) => t.url === media.url);
+        if (match) setSelectedVariantId(match.id);
+      }
+      return newIdx;
+    });
   };
 
   const nextMedia = (e) => {
     e.stopPropagation();
     haptic?.selection?.();
-    setActiveMediaIndex((prev) => (prev < mediaList.length - 1 ? prev + 1 : 0));
+    setActiveMediaIndex((prev) => {
+      const newIdx = prev < mediaList.length - 1 ? prev + 1 : 0;
+      const media = mediaList[newIdx];
+      if (media?.type === 'image') {
+        const match = imageTypes.find((t) => t.url === media.url);
+        if (match) setSelectedVariantId(match.id);
+      }
+      return newIdx;
+    });
   };
 
   const handleShare = () => {
@@ -297,10 +373,7 @@ export function ProductModal({
               return (
                 <button
                   key={idx}
-                  onClick={() => {
-                    haptic?.selection?.();
-                    setActiveMediaIndex(idx);
-                  }}
+                  onClick={() => handleSelectMedia(idx)}
                   className={`relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
                     isActive
                       ? 'border-indigo-500 ring-2 ring-indigo-500/30 scale-105'
@@ -360,6 +433,58 @@ export function ProductModal({
               )}
             </div>
           </div>
+
+          {/* Sub-Image Types / Variants Selector (if more than 1 image option exists) */}
+          {imageTypes.length > 1 && (
+            <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                  <span>{t('select_type')}</span>
+                </h3>
+                <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  {selectedVariant?.label}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {imageTypes.map((variant) => {
+                  const isSelected = selectedVariantId === variant.id;
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => handleSelectVariant(variant)}
+                      className={`relative p-1.5 rounded-xl flex flex-col items-center gap-1.5 border transition-all active:scale-95 text-left ${
+                        isSelected
+                          ? 'bg-indigo-600/20 border-indigo-500 ring-2 ring-indigo-500/30 shadow-lg shadow-indigo-500/10'
+                          : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-600 text-slate-400'
+                      }`}
+                    >
+                      <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-slate-950">
+                        <img
+                          src={variant.url}
+                          alt={variant.label}
+                          className="w-full h-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-md">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold truncate w-full text-center ${
+                          isSelected ? 'text-white' : 'text-slate-300'
+                        }`}
+                      >
+                        {variant.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">

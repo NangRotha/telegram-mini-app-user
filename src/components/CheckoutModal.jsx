@@ -166,6 +166,8 @@ export function CheckoutModal({
       items: items.map((i) => ({
         product_id: i.product.id,
         quantity: i.quantity,
+        selected_image: i.selected_image || i.product.image_url || '',
+        variant_name: i.variant_name || '',
       })),
     };
 
@@ -423,13 +425,24 @@ export function CheckoutModal({
           <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-800 space-y-2">
             <h4 className="text-xs font-bold text-slate-300">{t('order_summary')}</h4>
             <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1 scroll-touch">
-              {items.map(({ product, quantity }) => (
-                <div key={product.id} className="flex justify-between text-[11px] text-slate-400">
-                  <span className="truncate max-w-[200px]">
-                    {product.title} <strong className="text-slate-200">x{quantity}</strong>
-                  </span>
-                  <span className="text-slate-200 font-semibold">
-                    ${(product.price * quantity).toFixed(2)}
+              {items.map((item, idx) => (
+                <div key={item.id || idx} className="flex justify-between items-center text-[11px] text-slate-400">
+                  <div className="flex items-center gap-2 truncate max-w-[210px]">
+                    <img
+                      src={item.selected_image || item.product.image_url}
+                      alt=""
+                      className="w-5 h-5 rounded object-cover bg-slate-900 border border-slate-700 shrink-0"
+                    />
+                    <span className="truncate">{item.product.title}</span>
+                    {item.variant_name && (
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[9px] font-bold shrink-0 border border-indigo-500/30">
+                        {item.variant_name}
+                      </span>
+                    )}
+                    <strong className="text-slate-200 ml-0.5 shrink-0">x{item.quantity}</strong>
+                  </div>
+                  <span className="text-slate-200 font-semibold shrink-0">
+                    ${(item.product.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
               ))}

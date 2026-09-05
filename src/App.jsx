@@ -94,7 +94,18 @@ export default function App() {
   const [cartItems, setCartItems] = useState(() => {
     try {
       const saved = localStorage.getItem('minishop_cart');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed)
+        ? parsed.map((item) => ({
+            id: item.id || `${item.product?.id || ''}_${item.variant_id || 'main'}`,
+            product: item.product,
+            quantity: item.quantity,
+            selected_image: item.selected_image || item.product?.image_url || '',
+            variant_name: item.variant_name || '',
+            variant_id: item.variant_id || 'main',
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -164,6 +175,7 @@ export default function App() {
             if (!fresh || !fresh.is_active || fresh.stock <= 0) return null;
             return {
               ...item,
+              id: item.id || `${item.product.id}_${item.variant_id || 'main'}`,
               product: fresh,
               quantity: Math.min(item.quantity, fresh.stock),
             };
@@ -291,37 +303,62 @@ export default function App() {
   }, [cartItems]);
 
   // Cart Handlers
-  const handleAddToCart = (product, quantity = 1) => {
+  const handleAddToCart = (product, quantity = 1, variantOption = null) => {
     haptic.impact('light');
+    const variantId = variantOption?.variant_id || 'main';
+    const variantName = variantOption?.variant_name || '';
+    const selectedImage = variantOption?.selected_image || product.image_url || '';
+    const itemKey = `${product.id}_${variantId}`;
+
     setCartItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
+      const existingIdx = prev.findIndex(
+        (item) =>
+          item.id === itemKey ||
+          (item.product.id === product.id && (item.variant_id || 'main') === variantId)
+      );
+      if (existingIdx !== -1) {
+        return prev.map((item, idx) =>
+          idx === existingIdx
             ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
             : item
         );
       }
-      return [...prev, { product, quantity }];
+      return [
+        ...prev,
+        {
+          id: itemKey,
+          product,
+          quantity,
+          selected_image: selectedImage,
+          variant_name: variantName,
+          variant_id: variantId,
+        },
+      ];
     });
   };
 
-  const handleUpdateQuantity = (productId, newQty) => {
+  const handleUpdateQuantity = (itemKeyOrProductId, newQty) => {
     haptic.selection();
     if (newQty <= 0) {
-      handleRemoveFromCart(productId);
+      handleRemoveFromCart(itemKeyOrProductId);
       return;
     }
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity: newQty } : item
+        item.id === itemKeyOrProductId || item.product.id === itemKeyOrProductId
+          ? { ...item, quantity: newQty }
+          : item
       )
     );
   };
 
-  const handleRemoveFromCart = (productId) => {
+  const handleRemoveFromCart = (itemKeyOrProductId) => {
     haptic.impact('medium');
-    setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
+    setCartItems((prev) =>
+      prev.filter(
+        (item) => item.id !== itemKeyOrProductId && item.product.id !== itemKeyOrProductId
+      )
+    );
   };
 
   // Tab Selection Handler
@@ -590,15 +627,19 @@ export default function App() {
             ) : (
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 {filteredProducts.map((product) => {
-                  const cartItem = cartItems.find((i) => i.product.id === product.id);
+                  const productCartQty = cartItems
+                    .filter((i) => i.product.id === product.id)
+                    .reduce((sum, i) => sum + i.quantity, 0);
                   return (
                     <ProductCard
                       key={product.id}
                       product={product}
                       onSelect={(p) => setSelectedProduct(p)}
-                      onAddToCart={(p) => handleAddToCart(p, 1)}
+                      onAddToCart={(p) =>
+                        p.sub_images?.length > 0 ? setSelectedProduct(p) : handleAddToCart(p, 1)
+                      }
                       onShare={(p) => setShareProduct(p)}
-                      cartQuantity={cartItem ? cartItem.quantity : 0}
+                      cartQuantity={productCartQty}
                       isFavorite={favorites.includes(product.id)}
                       onToggleFavorite={handleToggleFavorite}
                     />

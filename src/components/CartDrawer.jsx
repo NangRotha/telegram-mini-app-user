@@ -79,61 +79,74 @@ export function CartDrawer({
               </button>
             </div>
           ) : (
-            items.map(({ product, quantity }) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 border border-slate-800"
-              >
-                {/* Product Image */}
-                <img
-                  src={product.image_url}
-                  alt={product.title}
-                  className="w-14 h-14 rounded-xl object-cover bg-slate-700 shrink-0 border border-white/5"
-                />
+            items.map((cartItem) => {
+              const { id: itemKey, product, quantity, selected_image, variant_name } = cartItem;
+              const uniqueKey = itemKey || `${product.id}_${variant_name || 'main'}`;
+              const displayImage = selected_image || product.image_url;
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-semibold text-white truncate">
-                    {product.title}
-                  </h4>
-                  <p className="text-xs font-bold text-emerald-400 mt-0.5">
-                    ${(product.price * quantity).toFixed(2)}
-                  </p>
-                  <span className="text-[10px] text-slate-400">
-                    ${product.price.toFixed(2)} / {t('price_label').toLowerCase()}
-                  </span>
-                </div>
-
-                {/* Quantity Buttons */}
-                <div className="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-0.5 shrink-0">
-                  <button
-                    onClick={() => onUpdateQuantity(product.id, quantity - 1)}
-                    className="p-1 text-slate-400 hover:text-white transition-colors"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="w-6 text-center text-xs font-bold text-white">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => onUpdateQuantity(product.id, quantity + 1)}
-                    disabled={quantity >= product.stock}
-                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-
-                {/* Remove */}
-                <button
-                  onClick={() => onRemoveItem(product.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
-                  title="Remove"
+              return (
+                <div
+                  key={uniqueKey}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 border border-slate-800"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))
+                  {/* Product Image (Selected Subimage / Main) */}
+                  <img
+                    src={displayImage}
+                    alt={product.title}
+                    className="w-14 h-14 rounded-xl object-cover bg-slate-700 shrink-0 border border-white/5"
+                  />
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-white truncate">
+                      {product.title}
+                    </h4>
+
+                    {variant_name && (
+                      <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
+                        {variant_name}
+                      </span>
+                    )}
+
+                    <p className="text-xs font-bold text-emerald-400 mt-0.5">
+                      ${(product.price * quantity).toFixed(2)}
+                    </p>
+                    <span className="text-[10px] text-slate-400">
+                      ${product.price.toFixed(2)} / {t('price_label').toLowerCase()}
+                    </span>
+                  </div>
+
+                  {/* Quantity Buttons */}
+                  <div className="flex items-center bg-slate-900 rounded-lg border border-slate-700 p-0.5 shrink-0">
+                    <button
+                      onClick={() => onUpdateQuantity(uniqueKey, quantity - 1)}
+                      className="p-1 text-slate-400 hover:text-white transition-colors"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="w-6 text-center text-xs font-bold text-white">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => onUpdateQuantity(uniqueKey, quantity + 1)}
+                      disabled={quantity >= product.stock}
+                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Remove */}
+                  <button
+                    onClick={() => onRemoveItem(uniqueKey)}
+                    className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
+                    title="Remove"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
 
