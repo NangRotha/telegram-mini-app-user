@@ -21,10 +21,17 @@ export function useRealtime(onMessage) {
 
       try {
         let wsUrl;
+        const customWsUrl = import.meta.env.VITE_WS_URL;
         const apiBase = import.meta.env.VITE_API_BASE || '';
-        if (apiBase.startsWith('http')) {
+
+        if (customWsUrl) {
+          wsUrl = customWsUrl;
+        } else if (apiBase.startsWith('http')) {
           const wsBase = apiBase.replace(/^http/, 'ws');
-          wsUrl = `${wsBase}/ws`;
+          wsUrl = wsBase.endsWith('/api') ? `${wsBase}/ws` : `${wsBase}/api/ws`;
+        } else if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+          // Vercel serverless rewrites cannot proxy persistent WebSockets; connect directly to live Render backend
+          wsUrl = 'wss://telegrammini-app-backend.onrender.com/api/ws';
         } else {
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           wsUrl = `${protocol}//${window.location.host}/api/ws`;

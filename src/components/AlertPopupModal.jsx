@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Sparkles, Megaphone, Info, AlertTriangle, ArrowRight } from 'lucide-react';
+import { getMediaUrl } from '../services/api';
 
 export function AlertPopupModal({ alert, onDismiss, onAction, haptic }) {
+  const [imageError, setImageError] = useState(false);
   if (!alert) return null;
 
   const handleAction = () => {
@@ -40,12 +42,13 @@ export function AlertPopupModal({ alert, onDismiss, onAction, haptic }) {
       <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700/80 text-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Banner Image if present */}
         <div className="relative">
-          {alert.image_url ? (
+          {alert.image_url && !imageError ? (
             <div className="w-full aspect-[16/9] max-h-48 bg-slate-800 overflow-hidden">
               <img
-                src={alert.image_url}
+                src={getMediaUrl(alert.image_url)}
                 alt={alert.title}
                 className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
               />
             </div>
           ) : (

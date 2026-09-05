@@ -148,6 +148,29 @@ export default function App() {
       ]);
       setCategories(cats);
       setProducts(prods);
+
+      // Keep open modal in-sync with latest real-time product data (price, stock, media)
+      setSelectedProduct((curr) => {
+        if (!curr) return null;
+        const fresh = prods.find((p) => p.id === curr.id);
+        return fresh && fresh.is_active ? fresh : null;
+      });
+
+      // Keep cart items in-sync with real-time stock and pricing
+      setCartItems((currItems) =>
+        currItems
+          .map((item) => {
+            const fresh = prods.find((p) => p.id === item.product.id);
+            if (!fresh || !fresh.is_active || fresh.stock <= 0) return null;
+            return {
+              ...item,
+              product: fresh,
+              quantity: Math.min(item.quantity, fresh.stock),
+            };
+          })
+          .filter(Boolean)
+      );
+
       if (settingsData) setStoreInfo(settingsData);
       if (alertData && alertData.id) {
         const isDismissed = sessionStorage.getItem('dismissed_alert_' + alertData.id);
@@ -200,7 +223,20 @@ export default function App() {
   useRealtime(
     useCallback(
       (event) => {
-        if (event.type === 'PRODUCT_UPDATED' || event.type === 'CATEGORY_UPDATED') {
+        if (event.type === 'PRODUCT_UPDATED') {
+          // If a product was deleted, purge immediately from state and close modal if open
+          if (event.data?.action === 'delete' && event.data?.product_id) {
+            setProducts((prev) => prev.filter((p) => p.id !== event.data.product_id));
+            setSelectedProduct((curr) => (curr?.id === event.data.product_id ? null : curr));
+          } else if (event.data?.action === 'update' && event.data?.product) {
+            // Update product in-place immediately
+            const updated = event.data.product;
+            setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+            setSelectedProduct((curr) => (curr?.id === updated.id ? updated : curr));
+          }
+          loadCatalogData(true);
+        }
+        if (event.type === 'CATEGORY_UPDATED') {
           loadCatalogData(true);
         }
         if (event.type === 'PROFILE_UPDATED' && event.data?.id === currentUser?.id) {
