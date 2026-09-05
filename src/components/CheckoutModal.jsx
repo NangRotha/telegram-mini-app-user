@@ -12,7 +12,6 @@ import {
   Coins,
   Check,
   QrCode,
-  Banknote,
 } from 'lucide-react';
 import { getUserProfile, updateUserProfile, validatePromoCode } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -47,7 +46,7 @@ export function CheckoutModal({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cod'); // 'cod' | 'khqr'
+  const [paymentMethod] = useState('khqr'); // Exclusive payment method: ABA Pay / KHQR
   const [saveToProfile, setSaveToProfile] = useState(true);
   const [errors, setErrors] = useState({});
 
@@ -159,8 +158,8 @@ export function CheckoutModal({
       customer_name: customerName.trim(),
       customer_phone: phone.trim(),
       delivery_address: address.trim(),
-      payment_method: paymentMethod,
-      notes: `${notes.trim()}${paymentMethod === 'khqr' ? ' [Pay via ABA Pay / KHQR]' : ' [Pay via Cash on Delivery]'}`,
+      payment_method: 'khqr',
+      notes: `${notes.trim() ? notes.trim() + ' ' : ''}[Pay via ABA Pay / KHQR]`,
       promocode: appliedPromo ? appliedPromo.code : null,
       discount_amount: Number((promoDiscount + pointsDiscount).toFixed(2)),
       points_redeemed: pointsToRedeem,
@@ -276,49 +275,31 @@ export function CheckoutModal({
             />
           </div>
 
-          {/* Payment Method Selector */}
-          <div className="space-y-2">
+          {/* Payment Method - ABA Pay / KHQR */}
+          <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-300">
               {t('payment_method')}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('cod')}
-                className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all ${
-                  paymentMethod === 'cod'
-                    ? 'bg-emerald-950/40 border-emerald-500/80 text-white shadow-sm ring-1 ring-emerald-500/50'
-                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Banknote className="w-4 h-4 text-emerald-400" />
-                  {paymentMethod === 'cod' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-sky-950/50 to-slate-900 border border-sky-500/40 shadow-sm flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center shrink-0">
+                  <QrCode className="w-5 h-5 text-sky-400" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold">{t('payment_cod')}</div>
-                  <div className="text-[10px] text-slate-400 line-clamp-1">{t('payment_cod_desc')}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-white">{t('payment_khqr')}</span>
+                    <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                      Bakong KHQR
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {t('payment_khqr_desc')}
+                  </p>
                 </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('khqr')}
-                className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-1 transition-all ${
-                  paymentMethod === 'khqr'
-                    ? 'bg-sky-950/40 border-sky-500/80 text-white shadow-sm ring-1 ring-sky-500/50'
-                    : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:border-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <QrCode className="w-4 h-4 text-sky-400" />
-                  {paymentMethod === 'khqr' && <Check className="w-3.5 h-3.5 text-sky-400" />}
-                </div>
-                <div>
-                  <div className="text-xs font-bold">{t('payment_khqr')}</div>
-                  <div className="text-[10px] text-slate-400 line-clamp-1">{t('payment_khqr_desc')}</div>
-                </div>
-              </button>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 shrink-0">
+                <Check className="w-3.5 h-3.5" />
+              </div>
             </div>
           </div>
 

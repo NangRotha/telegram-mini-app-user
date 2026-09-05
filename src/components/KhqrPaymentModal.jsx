@@ -10,10 +10,9 @@ import {
   ShieldCheck,
   Loader2,
   Sparkles,
-  Zap,
   Smartphone,
 } from 'lucide-react';
-import { getKhqrPayment, checkPaymentStatus, simulatePaymentSuccess } from '../services/api';
+import { getKhqrPayment, checkPaymentStatus } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { useTelegram } from '../hooks/useTelegram';
 
@@ -31,7 +30,6 @@ export function KhqrPaymentModal({
   const [error, setError] = useState(null);
   const [isPaid, setIsPaid] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes countdown
 
@@ -160,22 +158,6 @@ export function KhqrPaymentModal({
       haptic.notification('error');
     } finally {
       setIsVerifying(false);
-    }
-  };
-
-  const handleSimulate = async () => {
-    if (!order?.order_number || isSimulating || isPaid) return;
-    setIsSimulating(true);
-    haptic.impact('medium');
-    try {
-      const res = await simulatePaymentSuccess(order.order_number);
-      if (res.paid || res.success) {
-        handleSuccessPayment();
-      }
-    } catch (err) {
-      alert(`Simulation error: ${err.message}`);
-    } finally {
-      setIsSimulating(false);
     }
   };
 
@@ -394,11 +376,11 @@ export function KhqrPaymentModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
+              <div className="pt-0.5">
                 <button
                   type="button"
                   onClick={handleCopyString}
-                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                 >
                   {copied ? (
                     <>
@@ -411,21 +393,6 @@ export function KhqrPaymentModal({
                       <span>{t('khqr_copy_string')}</span>
                     </>
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSimulate}
-                  disabled={isSimulating}
-                  title="Simulate instant payment for rapid demonstration"
-                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600/80 to-amber-700/80 hover:from-amber-500 hover:to-amber-600 border border-amber-500/40 text-amber-100 text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 shadow-md"
-                >
-                  {isSimulating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Zap className="w-4 h-4 text-amber-300" />
-                  )}
-                  <span className="truncate">{t('khqr_simulate_btn')}</span>
                 </button>
               </div>
             </>
