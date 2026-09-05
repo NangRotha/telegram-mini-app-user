@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Star, Film, Heart } from 'lucide-react';
+import { Plus, Star, Film, Heart, Share2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export function ProductCard({
@@ -9,6 +9,7 @@ export function ProductCard({
   cartQuantity,
   isFavorite = false,
   onToggleFavorite,
+  onShare,
 }) {
   const { t } = useLanguage();
   const isOutOfStock = product.stock <= 0;
@@ -54,6 +55,22 @@ export function ProductCard({
             title="Favorite"
           >
             <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+          </button>
+        )}
+
+        {/* Share Button */}
+        {onShare && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare(product);
+            }}
+            className={`absolute top-2 p-1.5 rounded-full bg-slate-900/80 backdrop-blur-md text-slate-300 hover:text-white z-10 transition-transform active:scale-90 border border-white/10 shadow-sm ${
+              onToggleFavorite ? 'right-9' : 'right-2'
+            }`}
+            title="Share"
+          >
+            <Share2 className="w-3.5 h-3.5" />
           </button>
         )}
 

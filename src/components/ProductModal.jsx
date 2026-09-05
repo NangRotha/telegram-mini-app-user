@@ -24,6 +24,7 @@ export function ProductModal({
   initialQuantity = 1,
   isFavorite = false,
   onToggleFavorite,
+  onShare,
   haptic,
 }) {
   const { t } = useLanguage();
@@ -124,6 +125,10 @@ export function ProductModal({
 
   const handleShare = () => {
     haptic?.impact?.('light');
+    if (onShare) {
+      onShare(product);
+      return;
+    }
     if (navigator.share) {
       navigator
         .share({

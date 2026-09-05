@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTelegram } from './hooks/useTelegram';
 import { useRealtime } from './hooks/useRealtime';
-import { getCategories, getProducts, createOrder, getUserProfile } from './services/api';
+import {
+  getCategories,
+  getProducts,
+  createOrder,
+  getUserProfile,
+  getActiveAlert,
+  getSettings,
+} from './services/api';
 import { TelegramTopBar } from './components/TelegramTopBar';
 import { Header } from './components/Header';
 import { Banner } from './components/Banner';
@@ -18,6 +25,8 @@ import { PromosModal } from './components/PromosModal';
 import { FavoritesModal } from './components/FavoritesModal';
 import { KhqrPaymentModal } from './components/KhqrPaymentModal';
 import { BottomNavBar } from './components/BottomNavBar';
+import { ShareProductModal } from './components/ShareProductModal';
+import { AlertPopupModal } from './components/AlertPopupModal';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { useLanguage } from './context/LanguageContext';
 
@@ -68,6 +77,9 @@ export default function App() {
 
   // Modals & Drawers
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [shareProduct, setShareProduct] = useState(null);
+  const [activeAlert, setActiveAlert] = useState(null);
+  const [storeInfo, setStoreInfo] = useState({ store_name: 'Mini Shop', store_logo: '🛍' });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
@@ -123,17 +135,26 @@ export default function App() {
     return products.filter((p) => favorites.includes(p.id));
   }, [products, favorites]);
 
-  // Load catalog data
+  // Load catalog data, active alert, and store settings
   const loadCatalogData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const [cats, prods] = await Promise.all([
+      const [cats, prods, alertData, settingsData] = await Promise.all([
         getCategories(),
         getProducts(),
+        getActiveAlert(),
+        getSettings(),
       ]);
       setCategories(cats);
       setProducts(prods);
+      if (settingsData) setStoreInfo(settingsData);
+      if (alertData && alertData.id) {
+        const isDismissed = sessionStorage.getItem('dismissed_alert_' + alertData.id);
+        if (!isDismissed) {
+          setActiveAlert(alertData);
+        }
+      }
     } catch (err) {
       console.error('Failed to load shop data:', err);
       if (!silent) {
@@ -148,7 +169,34 @@ export default function App() {
     loadCatalogData();
   }, [loadCatalogData]);
 
-  // Real-time synchronization for catalog and profile
+  // Handle Product Deep Linking (?product=123 or Telegram start_param)
+  useEffect(() => {
+    if (products.length === 0) return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      let targetProdId = urlParams.get('product');
+
+      if (!targetProdId && window.Telegram?.WebApp?.initDataUnsafe?.start_param) {
+        const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+        if (startParam.startsWith('product_')) {
+          targetProdId = startParam.replace('product_', '');
+        } else if (/^\d+$/.test(startParam)) {
+          targetProdId = startParam;
+        }
+      }
+
+      if (targetProdId) {
+        const found = products.find((p) => String(p.id) === String(targetProdId));
+        if (found) {
+          setSelectedProduct(found);
+        }
+      }
+    } catch (e) {
+      console.warn('Deep link error:', e);
+    }
+  }, [products]);
+
+  // Real-time synchronization for catalog, profile, settings, and alerts
   useRealtime(
     useCallback(
       (event) => {
@@ -157,6 +205,18 @@ export default function App() {
         }
         if (event.type === 'PROFILE_UPDATED' && event.data?.id === currentUser?.id) {
           setCurrentUser((prev) => ({ ...(prev || {}), ...event.data }));
+        }
+        if (event.type === 'SETTINGS_UPDATED') {
+          setStoreInfo((prev) => ({ ...prev, ...event.data }));
+        }
+        if (event.type === 'ALERT_UPDATED') {
+          getActiveAlert().then((alertData) => {
+            if (alertData && !sessionStorage.getItem('dismissed_alert_' + alertData.id)) {
+              setActiveAlert(alertData);
+            } else if (!alertData) {
+              setActiveAlert(null);
+            }
+          });
         }
         if (event.type === 'PAYMENT_CONFIRMED' && event.data) {
           if (khqrOrder && khqrOrder.order_number === event.data.order_number) {
@@ -248,6 +308,8 @@ export default function App() {
   const hasModalOpen = useMemo(() => {
     return (
       Boolean(selectedProduct) ||
+      Boolean(shareProduct) ||
+      Boolean(activeAlert) ||
       isCartOpen ||
       isCheckoutOpen ||
       isOrdersOpen ||
@@ -259,6 +321,8 @@ export default function App() {
     );
   }, [
     selectedProduct,
+    shareProduct,
+    activeAlert,
     isCartOpen,
     isCheckoutOpen,
     isOrdersOpen,
@@ -276,7 +340,11 @@ export default function App() {
         isVisible: true,
         onClick: () => {
           haptic.impact('light');
-          if (isCheckoutOpen) {
+          if (shareProduct) {
+            setShareProduct(null);
+          } else if (activeAlert) {
+            setActiveAlert(null);
+          } else if (isCheckoutOpen) {
             setIsCheckoutOpen(false);
             setIsCartOpen(true);
           } else if (isCartOpen) {
@@ -306,6 +374,8 @@ export default function App() {
     }
   }, [
     hasModalOpen,
+    shareProduct,
+    activeAlert,
     isCheckoutOpen,
     isCartOpen,
     selectedProduct,
@@ -314,6 +384,7 @@ export default function App() {
     isOrdersOpen,
     isProfileOpen,
     confirmedOrder,
+    khqrOrder,
     updateBackButton,
     haptic,
   ]);
@@ -406,6 +477,7 @@ export default function App() {
           onOpenPromos={() => setIsPromosOpen(true)}
           isTelegram={isTelegram}
           haptic={haptic}
+          storeInfo={storeInfo}
         />
       </div>
 
@@ -489,6 +561,7 @@ export default function App() {
                       product={product}
                       onSelect={(p) => setSelectedProduct(p)}
                       onAddToCart={(p) => handleAddToCart(p, 1)}
+                      onShare={(p) => setShareProduct(p)}
                       cartQuantity={cartItem ? cartItem.quantity : 0}
                       isFavorite={favorites.includes(product.id)}
                       onToggleFavorite={handleToggleFavorite}
@@ -519,6 +592,7 @@ export default function App() {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={handleAddToCart}
+          onShare={(p) => setShareProduct(p)}
           initialQuantity={
             cartItems.find((i) => i.product.id === selectedProduct.id)?.quantity || 1
           }
@@ -623,6 +697,30 @@ export default function App() {
         onClose={() => setConfirmedOrder(null)}
         onOpenOrders={() => setIsOrdersOpen(true)}
       />
+
+      {/* Active Alert Announcement Popup */}
+      {activeAlert && (
+        <AlertPopupModal
+          alert={activeAlert}
+          onDismiss={() => {
+            try {
+              sessionStorage.setItem('dismissed_alert_' + activeAlert.id, 'true');
+            } catch {}
+            setActiveAlert(null);
+          }}
+          haptic={haptic}
+        />
+      )}
+
+      {/* Social Media Share Modal */}
+      {shareProduct && (
+        <ShareProductModal
+          product={shareProduct}
+          onClose={() => setShareProduct(null)}
+          storeName={storeInfo?.store_name}
+          haptic={haptic}
+        />
+      )}
     </div>
   );
 

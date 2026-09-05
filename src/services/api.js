@@ -123,3 +123,24 @@ export async function simulatePaymentSuccess(orderNumber) {
   }
   return res.json();
 }
+
+export async function getActiveAlert() {
+  try {
+    const res = await fetch(`${API_BASE}/alerts/active`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getSettings() {
+  try {
+    const res = await fetch(`${API_BASE}/settings`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
